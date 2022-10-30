@@ -15,15 +15,15 @@
    If you'd rather not, just change the below entries to strings with
    the config you want - ie #define EXAMPLE_WIFI_SSID "mywifissid"
 */
-#define EXAMPLE_ESP_WIFI_SSID      "esp is here"
-#define EXAMPLE_ESP_WIFI_PASS      "mypassword"
-#define EXAMPLE_ESP_MAXIMUM_RETRY  5
+#define ESP_WIFI_SSID      "ESPTesting"
+#define ESP_WIFI_PASS      "mypassword"
+#define ESP_MAXIMUM_RETRY  5
 
-static const char* ssid = "ESPTesting";
-static const char* password = "mypassword";
+// static char* ssid = "ESPTesting";
+// static char* password = "mypassword";
 
 /* FreeRTOS event group to signal when we are connected*/
-static EventGroupHandle_t s_wifi_event_group;
+static EventGroupHandle_t s_wifi_event_group = NULL;
 
 /* The event group allows multiple bits for each event, but we only care about two events:
  * - we are connected to the AP with an IP
@@ -43,6 +43,15 @@ namespace WiFiManager {
     void startAPMode();
     void startStationMode(const char* ssid, const char* password);
 
-    void setWifiCredintials(uint8_t* ssidInput , uint8_t* passInput , const char* ssid , const char* password);
-
+    static void setWifiCredintials(uint8_t* ssidInput , uint8_t* passInput , const char* ssid , const char* password){
+        for (int i = 0; i < strlen(ssid); i++){
+            (*ssidInput) = ssid[i];
+            ssidInput++;
+        }
+        for (int i = 0; i < strlen(password); i++){
+            (*passInput) = password[i];
+            passInput++;
+        }
+    }
+    
 }
