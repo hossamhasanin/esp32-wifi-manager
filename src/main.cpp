@@ -1,13 +1,13 @@
 #include <esp_wifi.h>
-#include "wifiManager.h"
+#include "wifimanager/wifiManager.h"
 #include <Arduino.h>
-#include "webServer.h"
+#include "webserver/webServer.h"
 #include "freertos/FreeRTOS.h"
 
 void setup(){
     Serial.begin(115200);
     WiFiManager::setupWifi();
-    WebServer::startWebServer();
+    WebServer::startWebServer(WiFiManager::startStationMode);
 }
 
 void loop(){
