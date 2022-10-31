@@ -52,15 +52,101 @@ void WiFiManager::wifiEventHandler(void* arg, esp_event_base_t event_base,int32_
     }
 }
 
-void WiFiManager::setupWifi(){
-
-    //Initialize NVS
+void initNvsMemory(){
     esp_err_t ret = nvs_flash_init();
     if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
       ESP_ERROR_CHECK(nvs_flash_erase());
       ret = nvs_flash_init();
     }
     ESP_ERROR_CHECK(ret);
+
+}
+
+nvs_handle_t openStorage(){
+    nvs_handle_t nvsHandle;
+    esp_err_t err = nvs_open("storage", NVS_READWRITE, &nvsHandle);
+    if (err != ESP_OK) {
+        Serial.println("Error (" + String(esp_err_to_name(err)) + ") opening NVS handle!");
+        return 0;
+    }
+    return nvsHandle;
+}
+
+char* getStoredSsid(nvs_handle_t nvsHandle){
+    size_t required_size;
+    esp_err_t err = nvs_get_str(nvsHandle, "ssid", NULL, &required_size);
+    if (err != ESP_OK) {
+        Serial.println("Error (" + String(esp_err_to_name(err)) + ") reading ssid!");
+        return NULL;
+    }
+
+    char* mssid = (char*) malloc(required_size);
+    nvs_get_str(nvsHandle, "ssid", mssid, &required_size);
+    
+    return mssid;
+}
+
+char* getStoredPassword(nvs_handle_t nvsHandle){
+    size_t required_size;
+    esp_err_t err = nvs_get_str(nvsHandle, "password", NULL, &required_size);
+    if (err != ESP_OK) {
+        Serial.println("Error (" + String(esp_err_to_name(err)) + ") reading ssid!");
+        return NULL;
+    }
+    char* mpassword = (char*) malloc(required_size);
+    nvs_get_str(nvsHandle, "password", mpassword, &required_size);
+
+    return mpassword;
+}
+
+void storeSsidToStorage(nvs_handle_t nvsHandle , const char* ssid){
+    esp_err_t err = nvs_set_str(nvsHandle, "ssid", ssid);
+    if (err != ESP_OK) {
+        Serial.println("Error (" + String(esp_err_to_name(err)) + ") saving ssid!");
+        return;
+    }
+    err = nvs_commit(nvsHandle);
+    if (err != ESP_OK) {
+        Serial.println("Error (" + String(esp_err_to_name(err)) + ") committing ssid!");
+        return;
+    }
+}
+
+void storePasswordToStorage(nvs_handle_t nvsHandle , const char* password){
+    esp_err_t err = nvs_set_str(nvsHandle, "password", password);
+    if (err != ESP_OK) {
+        Serial.println("Error (" + String(esp_err_to_name(err)) + ") saving password!");
+        return;
+    }
+    err = nvs_commit(nvsHandle);
+    if (err != ESP_OK) {
+        Serial.println("Error (" + String(esp_err_to_name(err)) + ") committing password!");
+        return;
+    }
+}
+
+void storeWifiCredentialsToStorage(const char* ssid, const char* password){
+    nvs_handle_t nvsHandle = openStorage();
+
+    if (strcmp(getStoredSsid(nvsHandle), ssid) == 0){
+        Serial.println("ssid already stored");
+        nvs_close(nvsHandle);
+        return;
+    }
+
+    Serial.println("Storage opened");
+    storeSsidToStorage(nvsHandle, ssid);
+    Serial.println("ssid stored");
+    storePasswordToStorage(nvsHandle, password);
+    Serial.println("password stored");
+    nvs_close(nvsHandle);
+    Serial.println("Storage closed");
+}
+
+void WiFiManager::setupWifi(){
+
+    //Initialize NVS
+    initNvsMemory();
 
     // Initialize TCP/IP network interface (should be called only once in application)
     ESP_ERROR_CHECK(esp_netif_init());
@@ -92,7 +178,24 @@ void WiFiManager::setupWifi(){
     ESP_LOGI(TAG, "GW: " IPSTR, IP2STR(&ipInfo.gw));
     ESP_LOGI(TAG, "Mask: " IPSTR, IP2STR(&ipInfo.netmask));
 
-    WiFiManager::startAPMode();
+    nvs_handle_t nvsHandle = openStorage();
+
+    if (nvsHandle == 0){
+        Serial.println("Error opening storage");
+        return;
+    }
+
+    char* ssid = getStoredSsid(nvsHandle);
+    char* password = getStoredPassword(nvsHandle);
+    if (ssid == NULL || password == NULL){
+        Serial.println("No stored wifi credentials");
+        WiFiManager::startAPMode();
+    } else {
+        Serial.println("Found stored wifi credentials");
+        WiFiManager::startStationMode(ssid, password);
+    }
+
+    nvs_close(nvsHandle);
 }
 
 void WiFiManager::startAPMode(){
@@ -110,17 +213,6 @@ void WiFiManager::startAPMode(){
             vEventGroupDelete(s_wifi_event_group);
         }
     }
-
- 
-    
-
-    // tcpip_adapter_ip_info_t tcpIpInfo;
-    // IP4_ADDR(&tcpIpInfo.ip, 192,168,1,222);
-    // IP4_ADDR(&tcpIpInfo.gw, 192,168,1,222);
-    // IP4_ADDR(&tcpIpInfo.netmask, 255,255,255,0);
-    // ESP_ERROR_CHECK(tcpip_adapter_dhcps_stop(TCPIP_ADAPTER_IF_AP));
-    // ESP_ERROR_CHECK(tcpip_adapter_set_ip_info(TCPIP_ADAPTER_IF_AP, &tcpIpInfo));
-    // ESP_ERROR_CHECK(tcpip_adapter_dhcps_start(TCPIP_ADAPTER_IF_AP));
 
     ESP_LOGI(TAG, "IP: " IPSTR, IP2STR(&ipInfo.ip));
     ESP_LOGI(TAG, "GW: " IPSTR, IP2STR(&ipInfo.gw));
@@ -156,7 +248,7 @@ void WiFiManager::startAPMode(){
 }
 
 void WiFiManager::startStationMode(const char* ssid, const char* password){
-    if(!apModeOn){
+    if(!apModeOn && isWifiOn){
         ESP_LOGI(TAG, "Station mode already on");
         return;
     }
@@ -170,7 +262,7 @@ void WiFiManager::startStationMode(const char* ssid, const char* password){
     Serial.print("try to connect to ");
     Serial.println(ssid);
     apModeOn = false;
-
+    isWifiOn = true;
 
 
     s_wifi_event_group = xEventGroupCreate();
@@ -196,6 +288,7 @@ void WiFiManager::startStationMode(const char* ssid, const char* password){
     if (bits & WIFI_CONNECTED_BIT) {
         ESP_LOGI(TAG, "connected to ap SSID:%s password:%s", *ssid, *password);
         Serial.println("Station mode started");
+        storeWifiCredentialsToStorage(ssid, password);
     }
     else if (bits & WIFI_FAIL_BIT) {
         ESP_LOGI(TAG, "Failed to connect to SSID:%s, password:%s", *ssid, *password);

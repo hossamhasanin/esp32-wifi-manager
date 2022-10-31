@@ -1,6 +1,7 @@
 #include "webServer.h"
 #include "wifiManager.h"
 #include <Arduino.h>
+#include <ArduinoJson.h>
 
 static httpd_handle_t server = NULL;
 
@@ -46,14 +47,6 @@ static esp_err_t authGetHandler(httpd_req_t *req)
         free(buf);
     }
 
-    // /* Set some custom headers */
-    // httpd_resp_set_hdr(req, "Custom-Header-1", "Custom-Value-1");
-    // httpd_resp_set_hdr(req, "Custom-Header-2", "Custom-Value-2");
-
-    /* Send response with custom headers and body set as the
-     * string passed in user context*/
-    // const char* resp_str = (const char*) req->user_ctx;
-
     return ESP_OK;
 }
 
@@ -63,6 +56,67 @@ static const httpd_uri_t auth = {
     .handler   = authGetHandler,
     .user_ctx  = NULL
 };
+
+
+static esp_err_t wifiCredintialsPostHandler(httpd_req_t *req)
+{
+    /* Destination buffer for content of HTTP POST request.
+     * httpd_req_recv() accepts char* only, but content could
+     * as well be any binary data (needs type casting).
+     * In case of string data, null termination will be absent, and
+     * content length would give length of string */
+    char content[100];
+
+    /* Truncate if content length larger than the buffer */
+    size_t recv_size = MIN(req->content_len, sizeof(content));
+
+    int ret = httpd_req_recv(req, content, recv_size);
+    if (ret <= 0) {  /* 0 return value indicates connection closed */
+        /* Check if timeout occurred */
+        if (ret == HTTPD_SOCK_ERR_TIMEOUT) {
+            /* In case of timeout one can choose to retry calling
+             * httpd_req_recv(), but to keep it simple, here we
+             * respond with an HTTP 408 (Request Timeout) error */
+            httpd_resp_send_408(req);
+        }
+        /* In case of error, returning ESP_FAIL will
+         * ensure that the underlying socket is closed */
+        return ESP_FAIL;
+    }
+
+
+    Serial.println("recieved data");
+    Serial.println(content);
+
+    // Parse JSON object
+    StaticJsonDocument<32> doc;
+    DeserializationError error = deserializeJson(doc, content);
+    if (error) {
+        Serial.print(F("deserializeJson() failed: "));
+        Serial.println(error.c_str());
+        return ESP_FAIL;
+    }
+    const char* ssid = doc["ssid"];
+    const char* password = doc["password"];
+
+    Serial.print("wifiCredintialsPostHandler ");
+    Serial.print("ssid: ");
+    Serial.println(ssid);
+    Serial.print("password: ");
+    Serial.println(password);
+
+    WiFiManager::startStationMode(ssid, password);
+
+    return ESP_OK;
+}
+
+static const httpd_uri_t wifiCredintials = {
+    .uri       = "/connect",
+    .method    = HTTP_POST,
+    .handler   = wifiCredintialsPostHandler,
+    .user_ctx  = NULL
+};
+
 
 void WebServer::startWebServer(){
     httpd_config_t config = HTTPD_DEFAULT_CONFIG();
@@ -74,9 +128,9 @@ void WebServer::startWebServer(){
     Serial.println(config.server_port);
     if (httpd_start(&server, &config) == ESP_OK) {
         // Set URI handlers
-        ESP_LOGI(TAG, "Registering URI handlers");
         httpd_register_uri_handler(server, &auth);
-        Serial.println("Registering URI handlers");
+        httpd_register_uri_handler(server, &wifiCredintials);
+        Serial.println("Registered URI handlers");
     } else {
             ESP_LOGI(TAG, "Error starting server!");
             Serial.println("Error starting server!");
