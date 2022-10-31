@@ -11,16 +11,15 @@
 
 #include "lwip/err.h"
 #include "lwip/sys.h"
-/* The examples use WiFi configuration that you can set via project configuration menu
-   If you'd rather not, just change the below entries to strings with
-   the config you want - ie #define EXAMPLE_WIFI_SSID "mywifissid"
-*/
+
+
 #define ESP_WIFI_SSID      "ESPTesting"
 #define ESP_WIFI_PASS      "mypassword"
-#define ESP_MAXIMUM_RETRY  5
+#define ESP_MAXIMUM_RETRY  3
 
-// static char* ssid = "ESPTesting";
-// static char* password = "mypassword";
+#define SET_STATIC_IP IP4_ADDR(&ipInfo.ip, 192,168,220,222)
+#define SET_STATIC_GATEWAY IP4_ADDR(&ipInfo.gw, 192,168,220,61)
+#define SET_STATIC_NETMASK IP4_ADDR(&ipInfo.netmask, 255,255,255,0)
 
 /* FreeRTOS event group to signal when we are connected*/
 static EventGroupHandle_t s_wifi_event_group = NULL;

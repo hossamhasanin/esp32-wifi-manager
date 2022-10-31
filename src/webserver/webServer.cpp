@@ -8,6 +8,7 @@ static OnCredintialsSet onCredintialsSet = NULL;
 /* An HTTP GET handler */
 static esp_err_t checkConnectedGetHandler(httpd_req_t* req){
 
+    Serial.println("Esp connected to wifi successfully");
     httpd_resp_send(req, "Connected", HTTPD_RESP_USE_STRLEN);
 
     return ESP_OK;
