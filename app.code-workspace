@@ -1,0 +1,19 @@
+{
+	"folders": [
+		{
+			"path": "../../Python/beams_chat_backend/app"
+		},
+		{
+			"name": "voice-assistant",
+			"path": "."
+		}
+	],
+	"settings": {
+		"files.associations": {
+			"istream": "cpp",
+			"ostream": "cpp",
+			"atomic": "cpp",
+			"cstdint": "cpp"
+		}
+	}
+}

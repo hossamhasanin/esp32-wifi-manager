@@ -1,6 +1,7 @@
 #include "wifiManager.h"
 #include <Arduino.h>
-
+#include "nvsManager/nvsManager.h"
+#include <string>
 
 static bool apModeOn = false;
 static bool isWifiOn = false;
@@ -60,101 +61,107 @@ void WiFiManager::wifiEventHandler(void* arg, esp_event_base_t event_base,int32_
     }
 }
 
-void initNvsMemory(){
-    esp_err_t ret = nvs_flash_init();
-    if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
-      ESP_ERROR_CHECK(nvs_flash_erase());
-      ret = nvs_flash_init();
-    }
-    ESP_ERROR_CHECK(ret);
+// void initNvsMemory(){
+//     esp_err_t ret = nvs_flash_init();
+//     if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
+//       ESP_ERROR_CHECK(nvs_flash_erase());
+//       ret = nvs_flash_init();
+//     }
+//     ESP_ERROR_CHECK(ret);
 
-}
+// }
 
-nvs_handle_t openStorage(){
-    nvs_handle_t nvsHandle;
-    esp_err_t err = nvs_open("storage", NVS_READWRITE, &nvsHandle);
-    if (err != ESP_OK) {
-        Serial.println("Error (" + String(esp_err_to_name(err)) + ") opening NVS handle!");
-        return 0;
-    }
-    return nvsHandle;
-}
+// nvs_handle_t openStorage(){
+//     nvs_handle_t nvsHandle;
+//     esp_err_t err = nvs_open("storage", NVS_READWRITE, &nvsHandle);
+//     if (err != ESP_OK) {
+//         Serial.println("Error (" + String(esp_err_to_name(err)) + ") opening NVS handle!");
+//         return 0;
+//     }
+//     return nvsHandle;
+// }
 
-char* getStoredSsid(nvs_handle_t nvsHandle){
-    size_t required_size;
-    esp_err_t err = nvs_get_str(nvsHandle, "ssid", NULL, &required_size);
-    if (err != ESP_OK) {
-        Serial.println("Error (" + String(esp_err_to_name(err)) + ") reading ssid!");
-        return NULL;
-    }
+// char* getStoredSsid(nvs_handle_t nvsHandle){
+//     size_t required_size;
+//     esp_err_t err = nvs_get_str(nvsHandle, "ssid", NULL, &required_size);
+//     if (err != ESP_OK) {
+//         Serial.println("Error (" + String(esp_err_to_name(err)) + ") reading ssid!");
+//         return NULL;
+//     }
 
-    char* mssid = (char*) malloc(required_size);
-    nvs_get_str(nvsHandle, "ssid", mssid, &required_size);
+//     char* mssid = (char*) malloc(required_size);
+//     nvs_get_str(nvsHandle, "ssid", mssid, &required_size);
     
-    return mssid;
-}
+//     return mssid;
+// }
 
-char* getStoredPassword(nvs_handle_t nvsHandle){
-    size_t required_size;
-    esp_err_t err = nvs_get_str(nvsHandle, "password", NULL, &required_size);
-    if (err != ESP_OK) {
-        Serial.println("Error (" + String(esp_err_to_name(err)) + ") reading ssid!");
-        return NULL;
-    }
-    char* mpassword = (char*) malloc(required_size);
-    nvs_get_str(nvsHandle, "password", mpassword, &required_size);
+// char* getStoredPassword(nvs_handle_t nvsHandle){
+//     size_t required_size;
+//     esp_err_t err = nvs_get_str(nvsHandle, "password", NULL, &required_size);
+//     if (err != ESP_OK) {
+//         Serial.println("Error (" + String(esp_err_to_name(err)) + ") reading ssid!");
+//         return NULL;
+//     }
+//     char* mpassword = (char*) malloc(required_size);
+//     nvs_get_str(nvsHandle, "password", mpassword, &required_size);
 
-    return mpassword;
-}
+//     return mpassword;
+// }
 
-void storeSsidToStorage(nvs_handle_t nvsHandle , const char* ssid){
-    esp_err_t err = nvs_set_str(nvsHandle, "ssid", ssid);
-    if (err != ESP_OK) {
-        Serial.println("Error (" + String(esp_err_to_name(err)) + ") saving ssid!");
-        return;
-    }
-    err = nvs_commit(nvsHandle);
-    if (err != ESP_OK) {
-        Serial.println("Error (" + String(esp_err_to_name(err)) + ") committing ssid!");
-        return;
-    }
-}
+// void storeSsidToStorage(nvs_handle_t nvsHandle , const char* ssid){
+//     esp_err_t err = nvs_set_str(nvsHandle, "ssid", ssid);
+//     if (err != ESP_OK) {
+//         Serial.println("Error (" + String(esp_err_to_name(err)) + ") saving ssid!");
+//         return;
+//     }
+//     err = nvs_commit(nvsHandle);
+//     if (err != ESP_OK) {
+//         Serial.println("Error (" + String(esp_err_to_name(err)) + ") committing ssid!");
+//         return;
+//     }
+// }
 
-void storePasswordToStorage(nvs_handle_t nvsHandle , const char* password){
-    esp_err_t err = nvs_set_str(nvsHandle, "password", password);
-    if (err != ESP_OK) {
-        Serial.println("Error (" + String(esp_err_to_name(err)) + ") saving password!");
-        return;
-    }
-    err = nvs_commit(nvsHandle);
-    if (err != ESP_OK) {
-        Serial.println("Error (" + String(esp_err_to_name(err)) + ") committing password!");
-        return;
-    }
-}
+// void storePasswordToStorage(nvs_handle_t nvsHandle , const char* password){
+//     esp_err_t err = nvs_set_str(nvsHandle, "password", password);
+//     if (err != ESP_OK) {
+//         Serial.println("Error (" + String(esp_err_to_name(err)) + ") saving password!");
+//         return;
+//     }
+//     err = nvs_commit(nvsHandle);
+//     if (err != ESP_OK) {
+//         Serial.println("Error (" + String(esp_err_to_name(err)) + ") committing password!");
+//         return;
+//     }
+// }
 
 void storeWifiCredentialsToStorage(const char* ssid, const char* password){
-    nvs_handle_t nvsHandle = openStorage();
+    nvs_handle_t nvsHandle = NvsManager::openStorage();
 
-    if (strcmp(getStoredSsid(nvsHandle), ssid) == 0){
+    std::string ssidString(ssid);
+    std::string passwordString(password);
+
+    std::string storedSsid = NvsManager::getStringVal(nvsHandle, "ssid");
+    std::string storedPassword = NvsManager::getStringVal(nvsHandle, "password");
+
+    if (storedSsid == ssidString){
         Serial.println("ssid already stored");
-        nvs_close(nvsHandle);
+        NvsManager::closeStorage(nvsHandle);
         return;
     }
 
     Serial.println("Storage opened");
-    storeSsidToStorage(nvsHandle, ssid);
+    NvsManager::storeString(nvsHandle, "ssid" , ssid);
     Serial.println("ssid stored");
-    storePasswordToStorage(nvsHandle, password);
+    NvsManager::storeString(nvsHandle, "password" ,password);
     Serial.println("password stored");
-    nvs_close(nvsHandle);
+    NvsManager::closeStorage(nvsHandle);
     Serial.println("Storage closed");
 }
 
 void WiFiManager::setupWifi(){
 
     //Initialize NVS
-    initNvsMemory();
+    NvsManager::initNvsMemory();
 
     // Initialize TCP/IP network interface (should be called only once in application)
     ESP_ERROR_CHECK(esp_netif_init());
@@ -178,26 +185,26 @@ void WiFiManager::setupWifi(){
     SET_STATIC_NETMASK;
     
 
-    nvs_handle_t nvsHandle = openStorage();
+    nvs_handle_t nvsHandle = NvsManager::openStorage();
 
     if (nvsHandle == 0){
         Serial.println("Error opening storage");
         return;
     }
 
-    char* ssid = getStoredSsid(nvsHandle);
-    char* password = getStoredPassword(nvsHandle);
+    std::string ssid = NvsManager::getStringVal(nvsHandle , "ssid");
+    std::string password = NvsManager::getStringVal(nvsHandle , "password");
 
-    if (ssid == NULL || password == NULL){
+    if (ssid.empty() || password.empty()){
         Serial.println("No stored wifi credentials");
         WiFiManager::startAPMode();
     } else {
         Serial.println("Found stored wifi credentials");
-        WiFiManager::startStationMode(ssid, password);
+        WiFiManager::startStationMode(ssid.c_str(), password.c_str());
     }
 
     
-    nvs_close(nvsHandle);
+    NvsManager::closeStorage(nvsHandle);
 }
 
 void WiFiManager::startAPMode(){
