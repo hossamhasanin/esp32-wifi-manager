@@ -6,7 +6,11 @@
 
 void setup(){
     Serial.begin(115200);
-    WiFiManager::setupWifi();
+    WiFiManager::setupWifi([](){
+        Serial.println("Connected to wifi");
+    }, [](){
+        Serial.println("Lost wifi connection");
+    });
     WebServer::startWebServer(WiFiManager::startStationMode);
 }
 

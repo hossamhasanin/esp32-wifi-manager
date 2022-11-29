@@ -11,6 +11,9 @@ static int retryToConnectSta = 0;
 static esp_netif_t* wifiSta = nullptr;
 static esp_netif_t* wifiAp = nullptr;
 
+static WiFiManager::OnSuccessfullyConncetedToWifi onSuccessfullyConncetedToWifiCallback = nullptr;
+static WiFiManager::OnWifiConnectionLost onWifiConnectionLostCallback = nullptr;
+
 void WiFiManager::wifiEventHandler(void* arg, esp_event_base_t event_base,int32_t event_id, void* event_data){
     if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_START) {
         // start station mode
@@ -18,6 +21,7 @@ void WiFiManager::wifiEventHandler(void* arg, esp_event_base_t event_base,int32_
         esp_wifi_connect();
     } else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_DISCONNECTED) {
         Serial.println("Wifi disconnected");
+        onWifiConnectionLostCallback();
         if (retryToConnectSta < ESP_MAXIMUM_RETRY) {
             // retry to connect to the AP
             esp_wifi_connect();
@@ -44,6 +48,8 @@ void WiFiManager::wifiEventHandler(void* arg, esp_event_base_t event_base,int32_
         Serial.println(String(event->ip_info.ip.addr));
         retryToConnectSta = 0;
 
+
+        onSuccessfullyConncetedToWifiCallback();
         if (s_wifi_event_group != NULL){
             xEventGroupSetBits(s_wifi_event_group, WIFI_CONNECTED_BIT);
         }
@@ -143,7 +149,7 @@ void storeWifiCredentialsToStorage(const char* ssid, const char* password){
     std::string storedSsid = NvsManager::getStringVal(nvsHandle, "ssid");
     std::string storedPassword = NvsManager::getStringVal(nvsHandle, "password");
 
-    if (storedSsid == ssidString){
+    if (storedSsid == ssidString && storedPassword == passwordString){
         Serial.println("ssid already stored");
         NvsManager::closeStorage(nvsHandle);
         return;
@@ -158,7 +164,10 @@ void storeWifiCredentialsToStorage(const char* ssid, const char* password){
     Serial.println("Storage closed");
 }
 
-void WiFiManager::setupWifi(){
+void WiFiManager::setupWifi(OnSuccessfullyConncetedToWifi onSuccessfullyConncetedToWifi, OnWifiConnectionLost onWifiConnectionLost){
+
+    onSuccessfullyConncetedToWifiCallback = onSuccessfullyConncetedToWifi;
+    onWifiConnectionLostCallback = onWifiConnectionLost;
 
     //Initialize NVS
     NvsManager::initNvsMemory();
@@ -310,13 +319,13 @@ void WiFiManager::startStationMode(const char* ssid, const char* password){
         ESP_LOGI(TAG, "connected to ap SSID:%s password:%s", *ssid, *password);
         Serial.println("Station mode started");
         storeWifiCredentialsToStorage(ssid, password);
-    }
-    else if (bits & WIFI_FAIL_BIT) {
+    } else if (bits & WIFI_FAIL_BIT) {
         Serial.println("Failed to connect to SSID");
         Serial.println("Back to AP mode");
         retryToConnectSta = 0;
-    }
-    else {
+
+        startAPMode();
+    } else {
         Serial.println("UNEXPECTED EVENT");
         ESP_LOGE(TAG, "UNEXPECTED EVENT");
     }

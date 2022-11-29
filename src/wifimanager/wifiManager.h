@@ -34,7 +34,11 @@ static const char *TAG = "WifiManager";
 
 namespace WiFiManager {
 
-    void setupWifi();
+    typedef void (*OnSuccessfullyConncetedToWifi)();
+    typedef void (*OnWifiConnectionLost)();
+
+
+    void setupWifi(OnSuccessfullyConncetedToWifi onSuccessfullyConncetedToWifi, OnWifiConnectionLost onWifiConnectionLost);
     
     void wifiEventHandler(void* arg, esp_event_base_t event_base,
                                 int32_t event_id, void* event_data);
